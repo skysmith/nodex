@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BIN="$ROOT/.build/release/nodex"
+
+if [[ ! -x "$BIN" ]]; then
+  swift build --package-path "$ROOT" -c release >/dev/null
+fi
+
+export NODEX_DISPLAY_COMMAND="${0}"
+exec "$BIN" "$@"

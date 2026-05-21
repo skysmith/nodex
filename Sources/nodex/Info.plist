@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>dev.nodex.cli</string>
+  <key>CFBundleName</key>
+  <string>Nodex</string>
+  <key>CFBundleDisplayName</key>
+  <string>Nodex</string>
+  <key>CFBundleVersion</key>
+  <string>0.1.0</string>
+  <key>CFBundleShortVersionString</key>
+  <string>0.1.0</string>
+  <key>NSMotionUsageDescription</key>
+  <string>Nodex reads AirPods motion so Codex can ask yes/no questions that you answer by nodding or shaking your head.</string>
+  <key>NSHumanReadableCopyright</key>
+  <string>Local prototype.</string>
+</dict>
+</plist>
