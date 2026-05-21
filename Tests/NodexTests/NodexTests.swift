@@ -20,6 +20,16 @@ final class NodexTests: XCTestCase {
         XCTAssertTrue(readme.contains("bin/nodex"))
         XCTAssertTrue(readme.contains("bin/nodex-motion"))
         XCTAssertTrue(readme.contains("--voice kokoro"))
+        XCTAssertTrue(readme.contains("--confirm"))
+    }
+
+    func testMotionWrapperConfirmsByDefault() throws {
+        let root = packageRoot()
+        let wrapperURL = root.appendingPathComponent("bin/nodex-motion")
+        let wrapper = try String(contentsOf: wrapperURL, encoding: .utf8)
+
+        XCTAssertTrue(wrapper.contains("--confirm|--no-confirm"))
+        XCTAssertTrue(wrapper.contains("ARGS+=(--confirm)"))
     }
 
     func testPublicDocsDoNotContainLocalWorkspacePath() throws {

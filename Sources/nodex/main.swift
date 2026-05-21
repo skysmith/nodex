@@ -134,6 +134,7 @@ struct AskConfig {
     var debug = false
     var speechEngine: SpeechEngine = .say
     var kokoro = KokoroSpeech()
+    var confirmAnswer = false
     var log = false
     var logPath = expandPath("~/.nodex/events.jsonl")
     var timeoutDefault: Answer?
@@ -499,6 +500,10 @@ struct Nodex {
                 config.json = true
             case "--debug":
                 config.debug = true
+            case "--confirm":
+                config.confirmAnswer = true
+            case "--no-confirm":
+                config.confirmAnswer = false
             case "--log":
                 config.log = true
             case "--no-log":
@@ -732,6 +737,7 @@ struct Nodex {
         mediaDetector?.stop()
 
         if let answer = completion.answer {
+            confirmAnswerIfNeeded(config: config, answer: answer, source: completion.source)
             appendLogIfNeeded(config: config, answer: answer, source: completion.source, detail: completion.detail, startedAt: startedAt)
             return (answer, completion.source, completion.detail)
         }
@@ -892,6 +898,21 @@ struct Nodex {
             fputs("\(value)\n", stderr)
         } else {
             print(value)
+        }
+    }
+
+    private static func confirmAnswerIfNeeded(config: AskConfig, answer: Answer, source: String) {
+        guard config.confirmAnswer else { return }
+        guard config.speechEngine != .none else { return }
+        guard source != "timeout" && source != "timeout-default" else { return }
+
+        switch answer {
+        case .yes:
+            speak("I heard yes.", engine: config.speechEngine, kokoro: config.kokoro)
+        case .no:
+            speak("I heard no.", engine: config.speechEngine, kokoro: config.kokoro)
+        case .timeout:
+            return
         }
     }
 
@@ -1128,6 +1149,8 @@ struct Nodex {
               --no-keyboard       Disable keyboard fallback
               --json              Print a machine-readable result
               --debug             Print gesture diagnostics to stderr
+              --confirm           Speak "I heard yes/no" before exiting
+              --no-confirm        Disable spoken answer confirmation
               --log               Append question/result JSONL to the Nodex log
               --log-path PATH      Use a custom JSONL log path
               --nod-threshold N    Override nod detection threshold

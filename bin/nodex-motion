@@ -70,7 +70,21 @@ build_app
 export NODEX_ROOT="$ROOT"
 export NODEX_DISPLAY_COMMAND="$0"
 
-open -W -n "$APP" --args "$@" --log-path "$LOG" --json
+ARGS=("$@")
+HAS_CONFIRM_FLAG=0
+for arg in "$@"; do
+  case "$arg" in
+    --confirm|--no-confirm)
+      HAS_CONFIRM_FLAG=1
+      ;;
+  esac
+done
+
+if [[ "$HAS_CONFIRM_FLAG" -eq 0 ]]; then
+  ARGS+=(--confirm)
+fi
+
+open -W -n "$APP" --args "${ARGS[@]}" --log-path "$LOG" --json
 
 if [[ ! -s "$LOG" ]]; then
   echo "nodex-motion: no result log was written" >&2

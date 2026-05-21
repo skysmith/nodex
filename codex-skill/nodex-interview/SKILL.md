@@ -19,6 +19,8 @@ Use this skill when Codex should keep working while the user answers only yes/no
 nodex-motion ask "QUESTION?" --motion-only
 ```
 
+This wrapper speaks "I heard yes" or "I heard no" before exiting, so wait for the command result before continuing.
+
 - If the user wants keyboard fallback instead of AirPods head gestures, call:
 
 ```bash

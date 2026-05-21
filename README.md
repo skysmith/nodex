@@ -46,6 +46,8 @@ For AirPods head-motion input on macOS, use `bin/nodex-motion`. It launches Node
 bin/nodex-motion ask "Should I keep going?" --motion-only
 ```
 
+`bin/nodex-motion` speaks a short acknowledgement like "I heard yes" or "I heard no" before it exits, so an agent cannot continue until you know Nodex heard you. Use `--no-confirm` to disable that.
+
 ## Install
 
 For a local install, run:
@@ -170,6 +172,12 @@ For head gestures, prefer:
 
 ```bash
 bin/nodex-motion ask "Should I keep going?" --motion-only
+```
+
+For keyboard or script usage, add `--confirm` when you also want a spoken acknowledgement:
+
+```bash
+bin/nodex ask "Should I keep going?" --keyboard-only --confirm
 ```
 
 Use `--default no` or `--default yes` when a timeout should map to a concrete answer:
