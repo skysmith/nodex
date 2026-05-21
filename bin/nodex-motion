@@ -1,7 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+resolve_script_dir() {
+  local source="${BASH_SOURCE[0]}"
+  while [[ -L "$source" ]]; do
+    local dir
+    dir="$(cd -P "$(dirname "$source")" && pwd)"
+    local target
+    target="$(readlink "$source")"
+    if [[ "$target" == /* ]]; then
+      source="$target"
+    else
+      source="$dir/$target"
+    fi
+  done
+  cd -P "$(dirname "$source")" && pwd
+}
+
+SCRIPT_DIR="$(resolve_script_dir)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BIN="$ROOT/.build/release/nodex"
 APP="$ROOT/dist/Nodex.app"
 LOG="$(mktemp "${TMPDIR:-/tmp}/nodex-motion.XXXXXX.jsonl")"
@@ -45,6 +62,11 @@ if [[ $# -eq 0 ]]; then
   exec "$ROOT/bin/nodex"
 fi
 
+if [[ "${1:-}" != "ask" ]]; then
+  echo "nodex-motion only supports 'ask'. Use nodex for other commands." >&2
+  exit 64
+fi
+
 build_release
 build_app
 
@@ -61,7 +83,16 @@ fi
 RESULT="$(tail -n 1 "$LOG")"
 printf '%s\n' "$RESULT"
 
-ANSWER="$(printf '%s\n' "$RESULT" | sed -n 's/.*"answer":"\([^"]*\)".*/\1/p')"
+ANSWER="$(/usr/bin/python3 - "$RESULT" <<'PY'
+import json
+import sys
+
+try:
+    print(json.loads(sys.argv[1]).get("answer", ""))
+except Exception:
+    raise SystemExit(64)
+PY
+)"
 
 case "$ANSWER" in
   yes) exit 0 ;;

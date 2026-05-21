@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Swift and shell checks
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Swift tests
+        run: swift test
+
+      - name: Release build
+        run: swift build -c release
+
+      - name: Bash syntax
+        run: |
+          bash -n bin/nodex
+          bash -n bin/nodex-motion
+          bash -n install.sh
+
+      - name: Install smoke test
+        run: |
+          BINDIR="$RUNNER_TEMP/nodex-bin" ./install.sh
+          "$RUNNER_TEMP/nodex-bin/nodex" doctor
+
+      - name: ShellCheck
+        run: |
+          brew install shellcheck
+          shellcheck bin/nodex bin/nodex-motion install.sh
+
+      - name: Public-file smoke checks
+        run: |
+          ! grep -R "/Users/" README.md Sources Tests bin scripts codex-skill install.sh
+          ! grep -R "Documents/codex" README.md Sources Tests bin scripts codex-skill install.sh

@@ -46,6 +46,28 @@ For AirPods head-motion input on macOS, use `bin/nodex-motion`. It launches Node
 bin/nodex-motion ask "Should I keep going?" --motion-only
 ```
 
+## Install
+
+For a local install, run:
+
+```bash
+./install.sh
+```
+
+This builds the release binary and symlinks the wrappers into `~/.local/bin`:
+
+```bash
+nodex doctor
+nodex-motion ask "Should I keep going?" --motion-only
+```
+
+Use `PREFIX` or `BINDIR` to choose another destination:
+
+```bash
+PREFIX=/opt/homebrew ./install.sh
+BINDIR="$HOME/bin" ./install.sh
+```
+
 To put Nodex on your PATH for the current shell:
 
 ```bash
@@ -180,7 +202,7 @@ Then start a Codex session with a prompt like:
 Use nodex-interview mode. Work on this task, and when you need me, ask yes/no questions through Nodex because I will not type.
 ```
 
-The skill assumes `nodex` is on PATH.
+The skill assumes `nodex` and `nodex-motion` are on PATH.
 
 ## Safety
 
@@ -192,6 +214,7 @@ Use head gestures only for low-risk binary choices. Do not use Nodex as the only
 swift build
 swift test
 swift build -c release
+bash -n bin/nodex bin/nodex-motion install.sh
 ```
 
 ## License

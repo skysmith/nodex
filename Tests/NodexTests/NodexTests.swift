@@ -32,8 +32,8 @@ final class NodexTests: XCTestCase {
 
         for file in publicFiles {
             let contents = try String(contentsOf: file, encoding: .utf8)
-            XCTAssertFalse(contents.contains("/Users/"), "\(file.path) should not contain local user paths")
-            XCTAssertFalse(contents.contains("Documents/codex"), "\(file.path) should not contain local workspace paths")
+            XCTAssertFalse(contents.contains("/" + "Users/"), "\(file.path) should not contain local user paths")
+            XCTAssertFalse(contents.contains("Documents" + "/codex"), "\(file.path) should not contain local workspace paths")
         }
     }
 
