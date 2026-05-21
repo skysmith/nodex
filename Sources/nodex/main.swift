@@ -16,6 +16,21 @@ func expandPath(_ path: String) -> String {
     return path
 }
 
+func defaultKokoroScriptPath() -> String {
+    let environment = ProcessInfo.processInfo.environment
+
+    if let script = environment["NODEX_KOKORO_SCRIPT"], !script.isEmpty {
+        return expandPath(script)
+    }
+
+    if let root = environment["NODEX_ROOT"], !root.isEmpty {
+        return URL(fileURLWithPath: root).appendingPathComponent("scripts/nodex_kokoro_say.py").path
+    }
+
+    let currentDirectory = FileManager.default.currentDirectoryPath
+    return URL(fileURLWithPath: currentDirectory).appendingPathComponent("scripts/nodex_kokoro_say.py").path
+}
+
 enum NodexError: Error, CustomStringConvertible {
     case missingQuestion
     case unknownCommand(String)
@@ -54,6 +69,21 @@ enum Answer: String, Equatable {
             return 2
         }
     }
+}
+
+enum SpeechEngine: String {
+    case say
+    case kokoro
+    case none
+}
+
+struct KokoroSpeech {
+    var python: String = ProcessInfo.processInfo.environment["NODEX_KOKORO_PYTHON"] ?? "python3"
+    var script: String = defaultKokoroScriptPath()
+    var model: String = expandPath(ProcessInfo.processInfo.environment["NODEX_KOKORO_MODEL"] ?? "~/.nodex/kokoro/kokoro-v1.0.onnx")
+    var voices: String = expandPath(ProcessInfo.processInfo.environment["NODEX_KOKORO_VOICES"] ?? "~/.nodex/kokoro/voices-v1.0.bin")
+    var voice: String = ProcessInfo.processInfo.environment["NODEX_KOKORO_VOICE"] ?? "af_sarah"
+    var speed: Double = Double(ProcessInfo.processInfo.environment["NODEX_KOKORO_SPEED"] ?? "") ?? 1.0
 }
 
 struct MotionTuning: Codable {
@@ -102,6 +132,8 @@ struct AskConfig {
     var keyboard = true
     var json = false
     var debug = false
+    var speechEngine: SpeechEngine = .say
+    var kokoro = KokoroSpeech()
     var log = false
     var logPath = expandPath("~/.nodex/events.jsonl")
     var timeoutDefault: Answer?
@@ -111,6 +143,8 @@ struct AskConfig {
 struct CalibrateConfig {
     var timeout: TimeInterval = 8
     var speak = true
+    var speechEngine: SpeechEngine = .say
+    var kokoro = KokoroSpeech()
     var debug = true
     var tuning = MotionTuning()
 }
@@ -373,6 +407,7 @@ struct Nodex {
             question: "",
             timeout: settings.defaultTimeout,
             speak: settings.sayQuestions,
+            speechEngine: settings.sayQuestions ? .say : .none,
             logPath: expandPath(settings.defaultLogPath),
             tuning: settings.motion
         )
@@ -396,8 +431,56 @@ struct Nodex {
                 config.timeoutDefault = try parseAnswer(args[index], allowTimeout: true)
             case "--no-say":
                 config.speak = false
+                config.speechEngine = .none
+            case "--no-speech":
+                config.speak = false
+                config.speechEngine = .none
             case "--say":
                 config.speak = true
+                config.speechEngine = .say
+            case "--voice":
+                index += 1
+                guard index < args.count else {
+                    throw NodexError.unknownOption("--voice requires say, kokoro, or none")
+                }
+                config.speechEngine = try parseSpeechEngine(args[index])
+                config.speak = config.speechEngine != .none
+            case "--kokoro-voice":
+                index += 1
+                guard index < args.count else {
+                    throw NodexError.unknownOption("--kokoro-voice requires a voice name")
+                }
+                config.kokoro.voice = args[index]
+            case "--kokoro-speed":
+                index += 1
+                guard index < args.count, let value = Double(args[index]) else {
+                    throw NodexError.unknownOption("--kokoro-speed requires a number")
+                }
+                config.kokoro.speed = value
+            case "--kokoro-python":
+                index += 1
+                guard index < args.count else {
+                    throw NodexError.unknownOption("--kokoro-python requires a path")
+                }
+                config.kokoro.python = expandPath(args[index])
+            case "--kokoro-model":
+                index += 1
+                guard index < args.count else {
+                    throw NodexError.unknownOption("--kokoro-model requires a path")
+                }
+                config.kokoro.model = expandPath(args[index])
+            case "--kokoro-voices":
+                index += 1
+                guard index < args.count else {
+                    throw NodexError.unknownOption("--kokoro-voices requires a path")
+                }
+                config.kokoro.voices = expandPath(args[index])
+            case "--kokoro-script":
+                index += 1
+                guard index < args.count else {
+                    throw NodexError.unknownOption("--kokoro-script requires a path")
+                }
+                config.kokoro.script = expandPath(args[index])
             case "--keyboard-only":
                 config.motion = false
                 config.media = false
@@ -465,6 +548,7 @@ struct Nodex {
         var config = CalibrateConfig(
             timeout: 8,
             speak: settings.sayQuestions,
+            speechEngine: settings.sayQuestions ? .say : .none,
             debug: true,
             tuning: settings.motion
         )
@@ -482,8 +566,53 @@ struct Nodex {
                 config.timeout = timeout
             case "--no-say":
                 config.speak = false
+                config.speechEngine = .none
             case "--say":
                 config.speak = true
+                config.speechEngine = .say
+            case "--voice":
+                index += 1
+                guard index < args.count else {
+                    throw NodexError.unknownOption("--voice requires say, kokoro, or none")
+                }
+                config.speechEngine = try parseSpeechEngine(args[index])
+                config.speak = config.speechEngine != .none
+            case "--kokoro-voice":
+                index += 1
+                guard index < args.count else {
+                    throw NodexError.unknownOption("--kokoro-voice requires a voice name")
+                }
+                config.kokoro.voice = args[index]
+            case "--kokoro-speed":
+                index += 1
+                guard index < args.count, let value = Double(args[index]) else {
+                    throw NodexError.unknownOption("--kokoro-speed requires a number")
+                }
+                config.kokoro.speed = value
+            case "--kokoro-python":
+                index += 1
+                guard index < args.count else {
+                    throw NodexError.unknownOption("--kokoro-python requires a path")
+                }
+                config.kokoro.python = expandPath(args[index])
+            case "--kokoro-model":
+                index += 1
+                guard index < args.count else {
+                    throw NodexError.unknownOption("--kokoro-model requires a path")
+                }
+                config.kokoro.model = expandPath(args[index])
+            case "--kokoro-voices":
+                index += 1
+                guard index < args.count else {
+                    throw NodexError.unknownOption("--kokoro-voices requires a path")
+                }
+                config.kokoro.voices = expandPath(args[index])
+            case "--kokoro-script":
+                index += 1
+                guard index < args.count else {
+                    throw NodexError.unknownOption("--kokoro-script requires a path")
+                }
+                config.kokoro.script = expandPath(args[index])
             case "--quiet":
                 config.debug = false
             case "--debug":
@@ -529,6 +658,19 @@ struct Nodex {
         }
     }
 
+    private static func parseSpeechEngine(_ value: String) throws -> SpeechEngine {
+        switch value.lowercased() {
+        case "say", "macos":
+            return .say
+        case "kokoro":
+            return .kokoro
+        case "none", "off", "silent":
+            return .none
+        default:
+            throw NodexError.invalidValue("Expected voice engine say, kokoro, or none.")
+        }
+    }
+
     private static func runAsk(_ config: AskConfig) -> (Answer, String, String) {
         let startedAt = Date()
         let completion = Completion()
@@ -542,7 +684,7 @@ struct Nodex {
         line("", json: config.json)
 
         if config.speak {
-            speak(config.question)
+            speak(config.question, engine: config.speechEngine, kokoro: config.kokoro)
         }
 
         if config.motion {
@@ -618,6 +760,8 @@ struct Nodex {
             media: false,
             keyboard: false,
             debug: config.debug,
+            speechEngine: config.speechEngine,
+            kokoro: config.kokoro,
             tuning: config.tuning
         )
         nodAsk.log = false
@@ -636,6 +780,8 @@ struct Nodex {
             media: false,
             keyboard: false,
             debug: config.debug,
+            speechEngine: config.speechEngine,
+            kokoro: config.kokoro,
             tuning: config.tuning
         )
         shakeAsk.log = false
@@ -749,7 +895,21 @@ struct Nodex {
         }
     }
 
-    private static func speak(_ question: String) {
+    private static func speak(_ question: String, engine: SpeechEngine, kokoro: KokoroSpeech) {
+        switch engine {
+        case .say:
+            speakWithSay(question)
+        case .kokoro:
+            if !speakWithKokoro(question, options: kokoro) {
+                fputs("nodex: falling back to macOS say\n", stderr)
+                speakWithSay(question)
+            }
+        case .none:
+            return
+        }
+    }
+
+    private static func speakWithSay(_ question: String) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/say")
         process.arguments = [question]
@@ -760,6 +920,84 @@ struct Nodex {
         } catch {
             fputs("nodex: could not run /usr/bin/say: \(error.localizedDescription)\n", stderr)
         }
+    }
+
+    private static func speakWithKokoro(_ question: String, options: KokoroSpeech) -> Bool {
+        let fileManager = FileManager.default
+        let requiredPaths = [
+            ("Kokoro script", options.script),
+            ("Kokoro model", options.model),
+            ("Kokoro voices", options.voices)
+        ]
+
+        for (label, path) in requiredPaths where !fileManager.fileExists(atPath: path) {
+            fputs("nodex: \(label) not found at \(path)\n", stderr)
+            return false
+        }
+
+        let outputURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("nodex-kokoro-\(UUID().uuidString).wav")
+
+        let process = Process()
+        let kokoroArguments = [
+            options.script,
+            "--model", options.model,
+            "--voices", options.voices,
+            "--voice", options.voice,
+            "--speed", String(options.speed),
+            "--output", outputURL.path
+        ]
+
+        if options.python.contains("/") || options.python.hasPrefix("~") {
+            process.executableURL = URL(fileURLWithPath: expandPath(options.python))
+            process.arguments = kokoroArguments
+        } else {
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = [options.python] + kokoroArguments
+        }
+
+        let inputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardInput = inputPipe
+        process.standardError = errorPipe
+
+        do {
+            try process.run()
+            if let data = question.data(using: .utf8) {
+                inputPipe.fileHandleForWriting.write(data)
+            }
+            inputPipe.fileHandleForWriting.closeFile()
+            process.waitUntilExit()
+        } catch {
+            fputs("nodex: could not run Kokoro python at \(options.python): \(error.localizedDescription)\n", stderr)
+            return false
+        }
+
+        if process.terminationStatus != 0 {
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            let errorText = String(data: errorData, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            fputs("nodex: Kokoro failed\(errorText.isEmpty ? "" : ": \(errorText)")\n", stderr)
+            return false
+        }
+
+        defer {
+            try? fileManager.removeItem(at: outputURL)
+        }
+
+        let player = Process()
+        player.executableURL = URL(fileURLWithPath: "/usr/bin/afplay")
+        player.arguments = [outputURL.path]
+
+        do {
+            try player.run()
+            player.waitUntilExit()
+        } catch {
+            fputs("nodex: could not play Kokoro audio: \(error.localizedDescription)\n", stderr)
+            return false
+        }
+
+        return player.terminationStatus == 0
     }
 
     private static func output(answer: Answer, source: String, detail: String, json: Bool) {
@@ -800,10 +1038,14 @@ struct Nodex {
         print("default timeout: \(Int(settings.defaultTimeout))s")
         print("motion tuning: nod \(settings.motion.nodThreshold), shake \(settings.motion.shakeThreshold), window \(settings.motion.window)s")
         print("default log path: \(expandPath(settings.defaultLogPath))")
+        print("kokoro script: \(defaultKokoroScriptPath())")
+        print("kokoro model: \(expandPath(ProcessInfo.processInfo.environment["NODEX_KOKORO_MODEL"] ?? "~/.nodex/kokoro/kokoro-v1.0.onnx"))")
+        print("kokoro voices: \(expandPath(ProcessInfo.processInfo.environment["NODEX_KOKORO_VOICES"] ?? "~/.nodex/kokoro/voices-v1.0.bin"))")
         print("")
         let command = displayCommand()
         print("Try:")
         print("  \(command) ask \"Should Codex continue?\" --debug")
+        print("  \(command) ask \"Should Codex continue?\" --voice kokoro")
         print("  \(command) calibrate")
         print("  \(command) ask \"Keyboard smoke test?\" --keyboard-only --no-say")
         print("")
@@ -870,7 +1112,15 @@ struct Nodex {
               --timeout SECONDS   Wait time before returning timeout. Default: 25
               --default ANSWER     Return yes/no/timeout when time expires
               --no-say            Do not read the question aloud with macOS say
+              --no-speech         Do not read the question aloud
               --say               Read the question aloud even if config disables it
+              --voice ENGINE      Speech engine: say, kokoro, or none
+              --kokoro-voice NAME Kokoro voice name. Default: af_sarah
+              --kokoro-speed N    Kokoro speed. Default: 1.0
+              --kokoro-python PATH
+              --kokoro-model PATH
+              --kokoro-voices PATH
+              --kokoro-script PATH
               --keyboard-only     Disable AirPods/media inputs and wait for y/n
               --motion-only       Disable media and keyboard fallback
               --no-motion         Disable AirPods head-motion input
@@ -905,6 +1155,9 @@ struct Nodex {
             Options:
               --timeout SECONDS
               --no-say
+              --voice ENGINE
+              --kokoro-voice NAME
+              --kokoro-speed N
               --quiet
               --nod-threshold N
               --shake-threshold N

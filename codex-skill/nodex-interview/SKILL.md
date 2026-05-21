@@ -19,6 +19,8 @@ Use this skill when Codex should keep working while the user answers only yes/no
 nodex ask "QUESTION?" --log
 ```
 
+If the user asks for Kokoro voice prompts and Kokoro is configured, add `--voice kokoro`.
+
 Use `--no-say` only when the user explicitly wants silent on-screen prompts instead of spoken prompts.
 
 If logging would expose sensitive details, omit `--log`.

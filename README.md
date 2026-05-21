@@ -2,7 +2,7 @@
 
 Answer AI-agent yes/no prompts with AirPods head gestures.
 
-Nodex is a tiny macOS CLI for hands-light agent control. It asks one binary question, reads it aloud with `say`, then waits for a nod, shake, AirPods squeeze/media key, or keyboard fallback. The point is simple: when an agent is working and only needs a small decision, you should not have to speak, unlock your phone, or walk back to your keyboard.
+Nodex is a tiny macOS CLI for hands-light agent control. It asks one binary question, reads it aloud with macOS `say` or optional Kokoro TTS, then waits for a nod, shake, AirPods squeeze/media key, or keyboard fallback. The point is simple: when an agent is working and only needs a small decision, you should not have to speak, unlock your phone, or walk back to your keyboard.
 
 ```bash
 nodex ask "Should Codex run the focused tests?"
@@ -26,6 +26,7 @@ This is an MVP/prototype. The CLI, keyboard fallback, config, logging, and tests
 - Swift 5.9+ / Xcode Command Line Tools
 - Motion-capable Apple headphones for head gestures, such as recent AirPods models
 - Motion/Fitness permission granted on first run
+- Optional: Python 3 plus Kokoro ONNX assets for `--voice kokoro`
 
 ## Quick Start
 
@@ -45,6 +46,43 @@ To put Nodex on your PATH for the current shell:
 export PATH="$PWD/bin:$PATH"
 nodex ask "Should I keep going?"
 ```
+
+## Optional Kokoro Voice
+
+Nodex uses macOS `say` by default because it works everywhere. To use Kokoro for warmer local prompts, install the optional Python dependencies and place the ONNX model assets under `~/.nodex/kokoro`.
+
+```bash
+python3 -m venv .venv-kokoro
+. .venv-kokoro/bin/activate
+pip install -r requirements-kokoro.txt
+
+mkdir -p ~/.nodex/kokoro
+# Put these files in ~/.nodex/kokoro:
+#   kokoro-v1.0.onnx
+#   voices-v1.0.bin
+```
+
+The model files are distributed separately by the Kokoro ONNX project. See the [`kokoro-onnx` releases](https://github.com/thewh1teagle/kokoro-onnx/releases) and package docs for current download options.
+
+Then run:
+
+```bash
+export NODEX_KOKORO_PYTHON="$PWD/.venv-kokoro/bin/python"
+bin/nodex ask "Should I keep going?" --voice kokoro
+```
+
+Useful options and environment variables:
+
+```bash
+bin/nodex ask "Should I run the tests?" --voice kokoro --kokoro-voice af_sarah --kokoro-speed 1.05
+
+export NODEX_KOKORO_MODEL="$HOME/.nodex/kokoro/kokoro-v1.0.onnx"
+export NODEX_KOKORO_VOICES="$HOME/.nodex/kokoro/voices-v1.0.bin"
+export NODEX_KOKORO_VOICE="af_sarah"
+export NODEX_KOKORO_SPEED="1.0"
+```
+
+If Kokoro is requested but not configured, Nodex prints the missing path and falls back to macOS `say`.
 
 ## Try The Hardware Path
 

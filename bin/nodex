@@ -9,4 +9,5 @@ if [[ ! -x "$BIN" ]]; then
 fi
 
 export NODEX_DISPLAY_COMMAND="${0}"
+export NODEX_ROOT="$ROOT"
 exec "$BIN" "$@"
