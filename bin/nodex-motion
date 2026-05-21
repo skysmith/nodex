@@ -53,10 +53,7 @@ PY
   codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
 }
 
-cleanup() {
-  rm -f "$LOG"
-}
-trap cleanup EXIT
+trap 'rm -f "$LOG"' EXIT
 
 if [[ $# -eq 0 ]]; then
   exec "$ROOT/bin/nodex"
