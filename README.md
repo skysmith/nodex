@@ -40,6 +40,12 @@ bin/nodex ask "Does Nodex work?"
 
 The wrapper at `bin/nodex` builds the release binary on first use.
 
+For AirPods head-motion input on macOS, use `bin/nodex-motion`. It launches Nodex through a tiny signed `.app` wrapper because macOS privacy services require a LaunchServices app identity for headphone motion.
+
+```bash
+bin/nodex-motion ask "Should I keep going?" --motion-only
+```
+
 To put Nodex on your PATH for the current shell:
 
 ```bash
@@ -90,20 +96,20 @@ Wear your AirPods, connect them to your Mac, then run:
 
 ```bash
 bin/nodex doctor
-bin/nodex ask "Does nodding mean yes?" --debug --timeout 25
-bin/nodex calibrate
+bin/nodex-motion ask "Does nodding mean yes?" --motion-only --debug --timeout 25
+bin/nodex-motion ask "Does shaking mean no?" --motion-only --debug --timeout 25
 ```
 
 If gestures time out, try a more sensitive pass:
 
 ```bash
-bin/nodex calibrate --nod-threshold 0.20 --shake-threshold 0.28
+bin/nodex-motion ask "Nod yes now." --motion-only --nod-threshold 0.20 --shake-threshold 0.28
 ```
 
 If normal head motion triggers false positives, try stricter thresholds:
 
 ```bash
-bin/nodex calibrate --nod-threshold 0.32 --shake-threshold 0.42
+bin/nodex-motion ask "Nod yes now." --motion-only --nod-threshold 0.32 --shake-threshold 0.42
 ```
 
 ## Config
@@ -136,6 +142,12 @@ Add `--log` to append one JSON line per question/result to `~/.nodex/events.json
 
 ```bash
 bin/nodex ask "Should I keep going?" --log
+```
+
+For head gestures, prefer:
+
+```bash
+bin/nodex-motion ask "Should I keep going?" --motion-only
 ```
 
 Use `--default no` or `--default yes` when a timeout should map to a concrete answer:

@@ -13,7 +13,13 @@ Use this skill when Codex should keep working while the user answers only yes/no
 - Phrase each question so `yes` and `no` are both clear.
 - Do not ask open-ended questions while in this mode.
 - Prefer continuing with a conservative default over asking low-value questions.
-- If a question is necessary, call the local helper:
+- If a head-gesture question is necessary on macOS, call the LaunchServices wrapper:
+
+```bash
+nodex-motion ask "QUESTION?" --motion-only
+```
+
+- If the user wants keyboard fallback instead of AirPods head gestures, call:
 
 ```bash
 nodex ask "QUESTION?" --log
@@ -25,7 +31,7 @@ Use `--no-say` only when the user explicitly wants silent on-screen prompts inst
 
 If logging would expose sensitive details, omit `--log`.
 
-If `nodex` is not on PATH, ask the user to add the checkout's `bin/` directory to PATH or provide the full path to `bin/nodex`.
+If `nodex` or `nodex-motion` is not on PATH, ask the user to add the checkout's `bin/` directory to PATH or provide the full path.
 
 ## Interpreting Results
 

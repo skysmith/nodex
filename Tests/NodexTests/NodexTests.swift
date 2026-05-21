@@ -18,6 +18,7 @@ final class NodexTests: XCTestCase {
 
         XCTAssertTrue(readme.contains("~/.codex/skills/nodex-interview"))
         XCTAssertTrue(readme.contains("bin/nodex"))
+        XCTAssertTrue(readme.contains("bin/nodex-motion"))
         XCTAssertTrue(readme.contains("--voice kokoro"))
     }
 

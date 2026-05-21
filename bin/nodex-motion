@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BIN="$ROOT/.build/release/nodex"
+APP="$ROOT/dist/Nodex.app"
+LOG="$(mktemp "${TMPDIR:-/tmp}/nodex-motion.XXXXXX.jsonl")"
+
+build_release() {
+  if [[ ! -x "$BIN" ]]; then
+    swift build --package-path "$ROOT" -c release >/dev/null
+  fi
+}
+
+build_app() {
+  mkdir -p "$APP/Contents/MacOS"
+  cp "$BIN" "$APP/Contents/MacOS/nodex"
+  chmod +x "$APP/Contents/MacOS/nodex"
+
+  /usr/bin/python3 - "$ROOT/Sources/nodex/Info.plist" "$APP/Contents/Info.plist" <<'PY'
+import plistlib
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1])
+dest = Path(sys.argv[2])
+with source.open("rb") as handle:
+    plist = plistlib.load(handle)
+plist["CFBundleExecutable"] = "nodex"
+plist["CFBundlePackageType"] = "APPL"
+dest.parent.mkdir(parents=True, exist_ok=True)
+with dest.open("wb") as handle:
+    plistlib.dump(plist, handle)
+PY
+
+  codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
+}
+
+cleanup() {
+  rm -f "$LOG"
+}
+trap cleanup EXIT
+
+if [[ $# -eq 0 ]]; then
+  exec "$ROOT/bin/nodex"
+fi
+
+build_release
+build_app
+
+export NODEX_ROOT="$ROOT"
+export NODEX_DISPLAY_COMMAND="$0"
+
+open -W -n "$APP" --args "$@" --log-path "$LOG" --json
+
+if [[ ! -s "$LOG" ]]; then
+  echo "nodex-motion: no result log was written" >&2
+  exit 64
+fi
+
+RESULT="$(tail -n 1 "$LOG")"
+printf '%s\n' "$RESULT"
+
+ANSWER="$(printf '%s\n' "$RESULT" | sed -n 's/.*"answer":"\([^"]*\)".*/\1/p')"
+
+case "$ANSWER" in
+  yes) exit 0 ;;
+  no) exit 1 ;;
+  timeout) exit 2 ;;
+  *)
+    echo "nodex-motion: could not parse answer from result" >&2
+    exit 64
+    ;;
+esac
